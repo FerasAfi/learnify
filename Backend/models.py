@@ -10,6 +10,10 @@ class User(BaseModel):
     sex: bool
     age: int
 
+class LoginCredentials(BaseModel):
+
+    username: str
+    password: str
 
 
 class Course(BaseModel):

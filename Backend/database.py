@@ -1,13 +1,11 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import ForeignKey, Column, Integer, String, Boolean, DateTime, func, Text
-from sympy.codegen.ast import integer
+
 
 SQLALCHEMY_DB_URL = "mysql+pymysql://root@localhost/learnify"
 engine = create_engine(SQLALCHEMY_DB_URL, echo=True)
 Base = declarative_base()
-
-
 
 
 
@@ -55,7 +53,7 @@ class QuizProgress(Base):
     __tablename__ = "quiz_progess"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(integer, ForeignKey("users.id"))
+    user_id = Column(Integer, ForeignKey("users.id"))
     quiz_id = Column(Integer, ForeignKey("quizs.id"))
     current_question = Column(Integer, default=0)
     answers = Column(Text)
@@ -132,20 +130,48 @@ Base.metadata.create_all(engine)
 SessionLocal = sessionmaker(bind=engine)
 
 
+
+#Authentication
+
 def create_user(username, password, email, sex, age):
     session = SessionLocal()
     try:
-        new_user = Users(username=username, password=password, email=email, sex=sex, age=age)
+        user_exists = session.query(Users).filter(Users.username == username).first()
+        if user_exists:
+            raise ValueError("Username already exists")
+        new_user = Users(
+            username=username,
+            password=password,
+            email=email,
+            sex=sex,
+            age=age
+        )
         session.add(new_user)
         session.commit()
         print(f"user {username} added successfully")
-        return 1
+        return new_user
     except Exception as e:
         session.rollback()
         print(f"failed to add {username}")
         return 0
     finally:
         session.close()
+
+
+def check_user(username, password):
+    session = SessionLocal()
+    try:
+        user = session.query(Users).filter(Users.username)
+
+
+def check_password(password):
+    session = SessionLocal()
+    return
+
+
+
+
+
 
 def create_course(user_id, source):
     session = SessionLocal()

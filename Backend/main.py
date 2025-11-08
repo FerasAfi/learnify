@@ -1,19 +1,46 @@
-from fastapi import FastAPI
-from pymupdf import annot_skel
-
-from models import User, Course, Quiz, Question, FlashCard, Summary, Chat, Message
+from fastapi import FastAPI, HTTPException
+from models import User, LoginCredentials,Course, Quiz, Question, FlashCard, Summary, Chat, Message
 import database as db
-
+from utils import encryption as encrypt
 app = FastAPI()
 
 #Authentication
 
-@app.post('/create_user')
-def create_user(user: User):
-    if db.create_user(username=user.username, password=user.password, email=user.email, sex=user.sex, age=user.age):
-        return {'msg':"200"}
-    else:
-        return {'msg': "500"}
+@app.post('/signup')
+def signup(user: User):
+    try:
+        db.create_user(
+            username=user.username,
+            password=encrypt.hash_password(user.password),
+            email=user.email,
+            sex=user.sex,
+            age=user.age
+        )
+        return {'msg':"User created successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500,detail="Error creating user" )
+
+@app.post('/signin')
+def signin(credentials: LoginCredentials):
+    db.check_user(credentials.username, credentials.password)
+
+
+
+@app.get('/login/check-username/{username}')
+def check_username(username: str):
+    return db.check_user(username)
+
+@app.get('/login/check-password')
+def check_password(password: str):
+    return db.check_password(password)
+
+
+
+
+
+
 
 
 @app.post('/create_course')

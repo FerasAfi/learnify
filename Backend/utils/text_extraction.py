@@ -37,4 +37,3 @@ def get_txt(file):
 
 
 
-get_pdf("meetkaggle.pdf")
