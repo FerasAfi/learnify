@@ -22,7 +22,7 @@ class Users(Base):
     date_joined = Column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
-        return f"<users(id='{self.id}' username='{self.name}' password='{self.password}' email='{self.email}' profile_pic='{self.profile_pic}' age='{self.age}'  sex='{self.sex}'  date_joined='{self.date_joined}')>"
+        return f"<users(id='{self.id}' username='{self.username}' password='{self.password}' email='{self.email}' profile_pic='{self.profile_pic}' age='{self.age}'  sex='{self.sex}'  date_joined='{self.date_joined}')>"
 
 
 class Courses(Base):
@@ -46,11 +46,11 @@ class Quizs(Base):
     name = Column(String(30))
 
     def __repr__(self):
-        return f"<quizs(id='{self.id}' quiz_id='{self.quiz_id}' name='{self.name}')>"
+        return f"<quizs(id='{self.id}' name='{self.name}')>"
 
 
 class QuizProgress(Base):
-    __tablename__ = "quiz_progess"
+    __tablename__ = "quiz_progress"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"))
@@ -71,7 +71,7 @@ class Questions(Base):
     question_id = Column(Integer, ForeignKey("quizs.id"))
     question = Column(String(500))
     options = Column(Text)
-    answer = Column(Integer)
+    answer = Column(Text)
 
     def __repr__(self):
         return f"<questions(id='{self.id}' question_id='{self.question_id}' question='{self.question}' options='{self.options}' answer='{self.answer}' )>"
@@ -127,6 +127,8 @@ class Messages(Base):
 
 
 Base.metadata.create_all(engine)
+
+
 SessionLocal = sessionmaker(bind=engine)
 
 
@@ -161,23 +163,27 @@ def create_user(username, password, email, sex, age):
 def check_user(username, password):
     session = SessionLocal()
     try:
-        user = session.query(Users).filter(Users.username)
-
-
-def check_password(password):
-    session = SessionLocal()
-    return
-
+        user_exists = session.query(Users).filter(Users.username == username).first()
+        if not user_exists:
+            raise ValueError("Username doesn't exists")
+        if
 
 
 
 
 
-def create_course(user_id, source):
+
+
+
+def create_course(user_id, name, source):
     session = SessionLocal()
     try:
-        new_user = Users(user_id=user_id, source=source)
-        session.add(new_user)
+        new_course = Courses(
+                user_id=user_id,
+                name=name,
+                source=source
+        )
+        session.add(new_course)
         session.commit()
         print(f"course with {user_id} id was added successfully")
         return 1
