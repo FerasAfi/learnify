@@ -45,7 +45,7 @@ class Question(BaseModel):
 
     quiz_id: int
     question: str
-    options: list
+    options: str
     answer: str
 
 
@@ -70,7 +70,6 @@ class Chat(BaseModel):
 
 class Message(BaseModel):
 
-    course_id: int
     chat_id: int
     sender_type: bool
     content: str

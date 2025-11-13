@@ -3,8 +3,10 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import ForeignKey, Column, Integer, String, Boolean, DateTime, func, Text
 
 
-SQLALCHEMY_DB_URL = "mysql+pymysql://root@localhost/learnify"
-engine = create_engine(SQLALCHEMY_DB_URL, echo=True)
+SQLALCHEMY_DATABASE_URL = "sqlite:///./learnify.db"
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
 Base = declarative_base()
 
 
@@ -68,7 +70,7 @@ class Questions(Base):
     __tablename__ = "questions"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    question_id = Column(Integer, ForeignKey("quizs.id"))
+    quiz_id = Column(Integer, ForeignKey("quizs.id"))
     question = Column(String(500))
     options = Column(Text)
     answer = Column(Text)
@@ -127,8 +129,6 @@ class Messages(Base):
 
 
 Base.metadata.create_all(engine)
-
-
 SessionLocal = sessionmaker(bind=engine)
 
 
@@ -159,18 +159,18 @@ def create_user(username, password, email, sex, age):
     finally:
         session.close()
 
-
-def check_user(username, password):
+def check_credentials(username, password):
     session = SessionLocal()
     try:
-        user_exists = session.query(Users).filter(Users.username == username).first()
-        if not user_exists:
+        user = session.query(Users).filter(Users.username == username).first()
+        if not user:
             raise ValueError("Username doesn't exists")
-        if
+        if user.password != password:
+            raise ValueError("Password is incorrect")
 
-
-
-
+        return True
+    finally:
+        session.close()
 
 
 
@@ -212,7 +212,12 @@ def create_quiz(course_id, name):
 def create_question(quiz_id, question, options, answer):
     session = SessionLocal()
     try:
-        new_question = Questions(quiz_id=quiz_id, question=question, options=options, answer=answer)
+        new_question = Questions(
+                            quiz_id=quiz_id,
+                            question=question,
+                            options=options,
+                            answer=answer
+                        )
         session.add(new_question)
         session.commit()
         print(f"question with {quiz_id} id was added successfully")
@@ -227,7 +232,11 @@ def create_question(quiz_id, question, options, answer):
 def create_flashcard(course_id, front, back):
     session = SessionLocal()
     try:
-        new_flashcard = Quizs(course_id=course_id, front=front, back=back)
+        new_flashcard = FlashCards(
+                            course_id=course_id,
+                            front=front,
+                            back=back
+                         )
         session.add(new_flashcard)
         session.commit()
         print(f"flashcard with {course_id} id was added successfully")
@@ -242,7 +251,10 @@ def create_flashcard(course_id, front, back):
 def create_summary(course_id, content):
     session = SessionLocal()
     try:
-        new_summary = Summaries(course_id=course_id, content=content)
+        new_summary = Summaries(
+                        course_id=course_id,
+                        content=content
+                    )
         session.add(new_summary)
         session.commit()
         print(f"summary with {course_id} id was added successfully")
@@ -257,7 +269,10 @@ def create_summary(course_id, content):
 def create_chat(user_id ,course_id):
     session = SessionLocal()
     try:
-        new_chat = Chats(user_id=user_id ,course_id=course_id)
+        new_chat = Chats(
+                    user_id=user_id ,
+                    course_id=course_id
+                    )
         session.add(new_chat)
         session.commit()
         print(f"chat with {course_id} id was added successfully")
@@ -269,10 +284,14 @@ def create_chat(user_id ,course_id):
     finally:
         session.close()
 
-def create_message(course_id, chat_id, sender_type, content):
+def create_message(chat_id, sender_type, content):
     session = SessionLocal()
     try:
-        new_message = Messages(course_id=course_id, chat_id=chat_id, sender_type=sender_type, content=content)
+        new_message = Messages(
+                        chat_id=chat_id,
+                        sender_type=sender_type,
+                        content=content
+                        )
         session.add(new_message)
         session.commit()
         print(f"message associated with chat {chat_id} id was added successfully")

@@ -25,15 +25,16 @@ def signup(user: User):
 @app.post('/signin')
 def signin(credentials: LoginCredentials):
     try:
-        db.check_user(credentials.username, credentials.password)
+        db.check_credentials(credentials.username, credentials.password)
+        return {"msg": "login successful"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        raise  HTTPException(status_code=500,detail="Error creating user")
 
 
 
-
-
-
-
-@app.post('/create_course')
+@app.post('/create-course')
 def create_course(course: Course):
     try:
         db.create_course(
@@ -47,7 +48,8 @@ def create_course(course: Course):
     except Exception:
         raise HTTPException(status_code=500, detail="Error creating Course")
 
-@app.post('/create_quiz')
+
+@app.post('/create-quiz')
 def create_quiz(quiz: Quiz):
     try:
         db.create_quiz(
@@ -60,7 +62,8 @@ def create_quiz(quiz: Quiz):
     except Exception:
         raise HTTPException(status_code=500, detail="Error creating Quiz")
 
-@app.post('/create_question')
+
+@app.post('/create-question')
 def create_question(question: Question):
     try:
         db.create_question(
@@ -76,7 +79,7 @@ def create_question(question: Question):
         raise HTTPException(status_code=500, detail="Error creating Question")
 
 
-@app.post('/create_flashcard')
+@app.post('/create-flashcard')
 def create_flashcard(flashcard: FlashCard):
     try:
         db.create_flashcard(
@@ -91,7 +94,7 @@ def create_flashcard(flashcard: FlashCard):
         raise HTTPException(status_code=500, detail="Error creating Flashcard")
 
 
-@app.post('/create_summary')
+@app.post('/create-summary')
 def create_summary(summary: Summary):
     try:
         db.create_summary(
@@ -105,7 +108,7 @@ def create_summary(summary: Summary):
         raise HTTPException(status_code=500, detail="Error creating Summary")
 
 
-@app.post('/create_chat')
+@app.post('/create-chat')
 def create_chat(chat: Chat):
     try:
         db.create_chat(
@@ -119,11 +122,10 @@ def create_chat(chat: Chat):
         raise HTTPException(status_code=500, detail="Error creating Chat")
 
 
-@app.post('/create_message')
+@app.post('/create-message')
 def create_message(message: Message):
     try:
         db.create_message(
-            course_id=message.course_id,
             chat_id=message.chat_id,
             sender_type=message.sender_type,
             content=message.content
