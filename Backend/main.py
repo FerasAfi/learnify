@@ -49,6 +49,17 @@ def create_course(course: Course):
         raise HTTPException(status_code=500, detail="Error creating Course")
 
 
+@app.get('/get-courses')
+def get_course(q: int):
+    try:
+        db.get_courses(q)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=e)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error while searching for courses")
+
+
+
 @app.post('/create-quiz')
 def create_quiz(quiz: Quiz):
     try:
@@ -62,6 +73,14 @@ def create_quiz(quiz: Quiz):
     except Exception:
         raise HTTPException(status_code=500, detail="Error creating Quiz")
 
+@app.get('/get-quiz')
+def get_quiz(q: int):
+    try:
+        db.get_quiz(q)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=e)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error while searching for quizs")
 
 @app.post('/create-question')
 def create_question(question: Question):
@@ -78,6 +97,15 @@ def create_question(question: Question):
     except Exception:
         raise HTTPException(status_code=500, detail="Error creating Question")
 
+@app.get('/get-questions')
+def get_questions(q: int):
+    try:
+        db.get_questions(q)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=e)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error while searching for questions")
+
 
 @app.post('/create-flashcard')
 def create_flashcard(flashcard: FlashCard):
@@ -93,6 +121,14 @@ def create_flashcard(flashcard: FlashCard):
     except Exception:
         raise HTTPException(status_code=500, detail="Error creating Flashcard")
 
+@app.get('/get-flashcard')
+def get_flashcard(q: int):
+    try:
+        db.get_flashcards(q)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=e)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error while searching for flashcards")
 
 @app.post('/create-summary')
 def create_summary(summary: Summary):
@@ -106,6 +142,15 @@ def create_summary(summary: Summary):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         raise HTTPException(status_code=500, detail="Error creating Summary")
+
+@app.get('/get-summary')
+def get_summary(q: int):
+    try:
+        db.get_summary(q)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=e)
+    except Exception:
+        raise HTTPException(status_code=500, detail="Error while searching for summaries")
 
 
 @app.post('/create-chat')

@@ -194,6 +194,32 @@ def create_course(user_id, name, source):
     finally:
         session.close()
 
+def get_courses(q):
+    session = SessionLocal()
+    try:
+        courses = session.query(Courses).filter(Courses.user_id == q)
+        if not courses:
+            raise ValueError("No courses found")
+        return courses
+    finally:
+        session.close()
+
+def add_source(origin, content):
+    session = SessionLocal()
+    source = {origin: content}
+    try:
+        source = Courses(source=source)
+        session.add(source)
+        session.commit()
+        print(f"source was added successfully to course id: {course_id} ")
+        return 1
+    except Exception as e:
+        session.rollback()
+        print(f"failed to add source  {course_id} id")
+        return 0
+    finally:
+        session.close()
+
 def create_quiz(course_id, name):
     session = SessionLocal()
     try:
@@ -208,6 +234,17 @@ def create_quiz(course_id, name):
         return 0
     finally:
         session.close()
+
+def get_quiz(q):
+    session = SessionLocal()
+    try:
+        quiz = session.query(Quizs).filter(Quizs.course_id == q)
+        if not quiz:
+            raise ValueError("No quiz found")
+        return quiz
+    finally:
+        session.close()
+
 
 def create_question(quiz_id, question, options, answer):
     session = SessionLocal()
@@ -229,6 +266,17 @@ def create_question(quiz_id, question, options, answer):
     finally:
         session.close()
 
+def get_questions(q):
+    session = SessionLocal()
+    try:
+        questions = session.query(Questions).filter(Questions.quiz_id == q)
+        if not questions:
+            raise ValueError("No questions found")
+        return questions
+    finally:
+        session.close()
+
+
 def create_flashcard(course_id, front, back):
     session = SessionLocal()
     try:
@@ -248,6 +296,18 @@ def create_flashcard(course_id, front, back):
     finally:
         session.close()
 
+def get_flashcards(q):
+    session = SessionLocal()
+    try:
+        flashcard = session.query(FlashCards).filter(FlashCards.course_id == q)
+        if not flashcard:
+            raise ValueError("No flashcards found")
+        return flashcard
+    finally:
+        session.close()
+
+
+
 def create_summary(course_id, content):
     session = SessionLocal()
     try:
@@ -265,6 +325,20 @@ def create_summary(course_id, content):
         return 0
     finally:
         session.close()
+
+
+def get_summary(q):
+    session = SessionLocal()
+    try:
+        summary = session.query(Summaries).filter(Summaries.course_id == q)
+        if not summary:
+            raise ValueError("No questions found")
+        return summary
+    finally:
+        session.close()
+
+
+
 
 def create_chat(user_id ,course_id):
     session = SessionLocal()
