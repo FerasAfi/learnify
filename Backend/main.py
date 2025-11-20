@@ -1,10 +1,14 @@
 from fastapi import FastAPI, HTTPException
 from models import User, LoginCredentials,Course, Quiz, Question, FlashCard, Summary, Chat, Message
 import database as db
+from utils import text_extraction as txt
 
 app = FastAPI()
 
+
+
 #Authentication
+#############------------------------------------------------------##############
 
 @app.post('/signup')
 def signup(user: User):
@@ -33,6 +37,9 @@ def signin(credentials: LoginCredentials):
         raise  HTTPException(status_code=500,detail="Error creating user")
 
 
+#Course
+#############------------------------------------------------------##############
+
 
 @app.post('/create-course')
 def create_course(course: Course):
@@ -48,7 +55,6 @@ def create_course(course: Course):
     except Exception:
         raise HTTPException(status_code=500, detail="Error creating Course")
 
-
 @app.get('/get-courses')
 def get_course(q: int):
     try:
@@ -58,6 +64,43 @@ def get_course(q: int):
     except Exception:
         raise HTTPException(status_code=500, detail="Error while searching for courses")
 
+@app.post('/add-source')
+def add_source(course_id: int, source: str, type: str):
+
+    match type:
+        case "pdf":
+            trans = txt.get_pdf(source)
+        case "docx":
+            trans = txt.get_docx(source)
+        case "txt":
+            trans = txt.get_txt(source)
+        case "site":
+            trans = txt.get_site(source)
+        case _:
+            raise HTTPException(status_code=400, detail="Invalid type provided")
+
+    try:
+        db.add_source(course_id, type, trans)
+        return {"message": "Source added successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=e)
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Error while adding source")
+
+@app.post('/update-course-title')
+def update_course_title(course_id: int, title: str):
+    try:
+        db.update_course_title(course_id, title)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=e)
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Error while adding source")
+
+
+#Quiz
+#############------------------------------------------------------##############
 
 
 @app.post('/create-quiz')
@@ -106,6 +149,8 @@ def get_questions(q: int):
     except Exception:
         raise HTTPException(status_code=500, detail="Error while searching for questions")
 
+#FlashCard
+#############------------------------------------------------------##############
 
 @app.post('/create-flashcard')
 def create_flashcard(flashcard: FlashCard):
@@ -130,6 +175,11 @@ def get_flashcard(q: int):
     except Exception:
         raise HTTPException(status_code=500, detail="Error while searching for flashcards")
 
+
+#Summary
+#############------------------------------------------------------##############
+
+
 @app.post('/create-summary')
 def create_summary(summary: Summary):
     try:
@@ -151,6 +201,10 @@ def get_summary(q: int):
         raise HTTPException(status_code=404, detail=e)
     except Exception:
         raise HTTPException(status_code=500, detail="Error while searching for summaries")
+
+
+#Chat-Bot
+#############------------------------------------------------------##############
 
 
 @app.post('/create-chat')

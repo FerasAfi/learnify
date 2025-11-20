@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy import ForeignKey, Column, Integer, String, Boolean, DateTime, func, Text
-
+import json
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./learnify.db"
 engine = create_engine(
@@ -134,6 +134,7 @@ SessionLocal = sessionmaker(bind=engine)
 
 
 #Authentication
+#############------------------------------------------------------##############
 
 def create_user(username, password, email, sex, age):
     session = SessionLocal()
@@ -173,6 +174,8 @@ def check_credentials(username, password):
         session.close()
 
 
+#Course
+#############------------------------------------------------------##############
 
 
 def create_course(user_id, name, source):
@@ -204,21 +207,47 @@ def get_courses(q):
     finally:
         session.close()
 
-def add_source(origin, content):
+def add_source(course_id, origin, content):
     session = SessionLocal()
-    source = {origin: content}
+    source = {"origin":origin, "content": content}
     try:
-        source = Courses(source=source)
-        session.add(source)
+        course = session.query(Courses).filter(Courses.id == course_id).first()
+        if not course:
+            raise ValueError(f"No course was found with id: {course_id} ")
+
+        course.source = json.dumps(source)
         session.commit()
         print(f"source was added successfully to course id: {course_id} ")
         return 1
     except Exception as e:
         session.rollback()
-        print(f"failed to add source  {course_id} id")
+        print(f"failed to add source to course id:  {course_id}")
         return 0
     finally:
         session.close()
+
+
+def update_course_title(course_id, title):
+    session = SessionLocal()
+    try:
+        course = session.query(Courses).filter(Courses.id == course_id).first()
+        if not course:
+            raise ValueError(f"No course was found with id: {course_id} ")
+
+        course.title = title
+        session.commit()
+        print(f"title was updated successfully of course id: {course_id} ")
+        return 1
+    except Exception as e:
+        session.rollback()
+        print(f"failed to update title of course id:  {course_id}")
+        return 0
+    finally:
+        session.close()
+
+#QUIZ
+#############------------------------------------------------------##############
+
 
 def create_quiz(course_id, name):
     session = SessionLocal()
@@ -277,6 +306,9 @@ def get_questions(q):
         session.close()
 
 
+#############------------------------------------------------------##############
+
+
 def create_flashcard(course_id, front, back):
     session = SessionLocal()
     try:
@@ -306,6 +338,9 @@ def get_flashcards(q):
     finally:
         session.close()
 
+
+#Summary
+#############------------------------------------------------------##############
 
 
 def create_summary(course_id, content):
@@ -338,7 +373,8 @@ def get_summary(q):
         session.close()
 
 
-
+#Chat-bot
+#############------------------------------------------------------##############
 
 def create_chat(user_id ,course_id):
     session = SessionLocal()
