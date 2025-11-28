@@ -58,9 +58,9 @@ def create_course(course: Course):
 @app.get('/get-courses')
 def get_course(q: int):
     try:
-        db.get_courses(q)
+        return db.get_courses(q)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=e)
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception:
         raise HTTPException(status_code=500, detail="Error while searching for courses")
 
@@ -80,7 +80,7 @@ def add_source(course_id: int, source: str, type: str):
             raise HTTPException(status_code=400, detail="Invalid type provided")
 
     try:
-        db.add_source(course_id, type, trans)
+        db.add_source(course_id, source, trans)
         return {"message": "Source added successfully"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=e)
@@ -92,11 +92,12 @@ def add_source(course_id: int, source: str, type: str):
 def update_course_title(course_id: int, title: str):
     try:
         db.update_course_title(course_id, title)
+        return {'msg':f'Course id: {course_id} title Updated'}
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=e)
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         print(e)
-        raise HTTPException(status_code=500, detail="Error while adding source")
+        raise HTTPException(status_code=500, detail="Error while updating course title")
 
 
 #Quiz
@@ -119,9 +120,9 @@ def create_quiz(quiz: Quiz):
 @app.get('/get-quiz')
 def get_quiz(q: int):
     try:
-        db.get_quiz(q)
+        return db.get_quiz(q)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=e)
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception:
         raise HTTPException(status_code=500, detail="Error while searching for quizs")
 
@@ -143,11 +144,11 @@ def create_question(question: Question):
 @app.get('/get-questions')
 def get_questions(q: int):
     try:
-        db.get_questions(q)
+        return db.get_questions(q)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=e)
-    except Exception:
-        raise HTTPException(status_code=500, detail="Error while searching for questions")
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 #FlashCard
 #############------------------------------------------------------##############
@@ -169,9 +170,9 @@ def create_flashcard(flashcard: FlashCard):
 @app.get('/get-flashcard')
 def get_flashcard(q: int):
     try:
-        db.get_flashcards(q)
+        return db.get_flashcards(q)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=e)
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception:
         raise HTTPException(status_code=500, detail="Error while searching for flashcards")
 
@@ -196,11 +197,11 @@ def create_summary(summary: Summary):
 @app.get('/get-summary')
 def get_summary(q: int):
     try:
-        db.get_summary(q)
+        return db.get_summary(q)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=e)
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception:
-        raise HTTPException(status_code=500, detail="Error while searching for summaries")
+        raise HTTPException(status_code=500, detail="Error while searching for summary")
 
 
 #Chat-Bot
@@ -220,7 +221,6 @@ def create_chat(chat: Chat):
     except Exception:
         raise HTTPException(status_code=500, detail="Error creating Chat")
 
-
 @app.post('/create-message')
 def create_message(message: Message):
     try:
@@ -235,6 +235,14 @@ def create_message(message: Message):
     except Exception:
         raise HTTPException(status_code=500, detail="Error creating Message")
 
+@app.get('/get-messages')
+def get_messages(q: int):
+    try:
+        return db.get_messages(q)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Something went wrong getting messages")
 
 
 

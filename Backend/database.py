@@ -173,6 +173,36 @@ def check_credentials(username, password):
     finally:
         session.close()
 
+def update_password(user_id, old_password, new_password):
+    session = SessionLocal()
+    try:
+        user = session.query(Users).filter(Users.id == user_id).first()
+        if user.password != old_password:
+            raise ValueError ("Your password doesn't match")
+        user.password = new_password
+        session.commit()
+
+    finally:
+        session.close()
+
+def update_username(user_id, new_username):
+    session = SessionLocal()
+    try:
+        user = session.query(Users).filter(Users.id == user_id).first()
+        user.username = new_username
+        session.commit()
+
+    finally:
+        session.close()
+
+def delete_account(user_id):
+    session = SessionLocal()
+    return
+
+
+
+
+
 
 #Course
 #############------------------------------------------------------##############
@@ -197,13 +227,22 @@ def create_course(user_id, name, source):
     finally:
         session.close()
 
-def get_courses(q):
+def get_courses(user_id: int):
     session = SessionLocal()
     try:
-        courses = session.query(Courses).filter(Courses.user_id == q)
-        if not courses:
+        courses = session.query(Courses).filter(Courses.user_id == user_id).all()
+        if courses == []:
             raise ValueError("No courses found")
-        return courses
+        return [
+            {
+                "id": c.id,
+                "name": c.name,
+                "user_id": c.user_id,
+                "source": c.source,
+                "date_created": c.date_created
+            }
+            for c in courses
+        ]
     finally:
         session.close()
 
@@ -218,14 +257,13 @@ def add_source(course_id, origin, content):
         course.source = json.dumps(source)
         session.commit()
         print(f"source was added successfully to course id: {course_id} ")
-        return 1
+        return course
     except Exception as e:
         session.rollback()
         print(f"failed to add source to course id:  {course_id}")
-        return 0
+        raise e
     finally:
         session.close()
-
 
 def update_course_title(course_id, title):
     session = SessionLocal()
@@ -234,16 +272,20 @@ def update_course_title(course_id, title):
         if not course:
             raise ValueError(f"No course was found with id: {course_id} ")
 
-        course.title = title
+        course.name = title
         session.commit()
         print(f"title was updated successfully of course id: {course_id} ")
         return 1
     except Exception as e:
         session.rollback()
         print(f"failed to update title of course id:  {course_id}")
-        return 0
+        raise e
     finally:
         session.close()
+
+def delete_course(course_id):
+    pass
+
 
 #QUIZ
 #############------------------------------------------------------##############
@@ -267,13 +309,18 @@ def create_quiz(course_id, name):
 def get_quiz(q):
     session = SessionLocal()
     try:
-        quiz = session.query(Quizs).filter(Quizs.course_id == q)
+        quiz = session.query(Quizs).filter(Quizs.course_id == q).first()
         if not quiz:
             raise ValueError("No quiz found")
-        return quiz
+        return {
+            "id": quiz.id,
+            "course_id": quiz.course_id,
+            "title": quiz.name
+        }
+    except Exception as e:
+        print(e)
     finally:
         session.close()
-
 
 def create_question(quiz_id, question, options, answer):
     session = SessionLocal()
@@ -295,17 +342,26 @@ def create_question(quiz_id, question, options, answer):
     finally:
         session.close()
 
-def get_questions(q):
+def get_questions(quiz_id: int):
     session = SessionLocal()
     try:
-        questions = session.query(Questions).filter(Questions.quiz_id == q)
-        if not questions:
+        questions = session.query(Questions).filter(Questions.quiz_id == quiz_id).all()
+        if questions == []:
             raise ValueError("No questions found")
-        return questions
+        return [
+            {
+                "id": q.id,
+                "quiz_id": q.quiz_id,
+                "question": q.question,
+                "options": q.options,
+                "answer": q.answer
+            } for q in questions
+        ]
     finally:
         session.close()
 
 
+#Flashcard
 #############------------------------------------------------------##############
 
 
@@ -328,13 +384,19 @@ def create_flashcard(course_id, front, back):
     finally:
         session.close()
 
-def get_flashcards(q):
+def get_flashcards(course_id: int):
     session = SessionLocal()
     try:
-        flashcard = session.query(FlashCards).filter(FlashCards.course_id == q)
-        if not flashcard:
+        flashcards = session.query(FlashCards).filter(FlashCards.course_id == course_id).all()
+        if flashcards == []:
             raise ValueError("No flashcards found")
-        return flashcard
+        return [
+            {
+                "id": f.id,
+                "front": f.front,
+                "back": f.back
+            } for f in flashcards
+        ]
     finally:
         session.close()
 
@@ -362,13 +424,16 @@ def create_summary(course_id, content):
         session.close()
 
 
-def get_summary(q):
+def get_summary(course_id):
     session = SessionLocal()
     try:
-        summary = session.query(Summaries).filter(Summaries.course_id == q)
+        summary = session.query(Summaries).filter(Summaries.course_id == course_id).first()
         if not summary:
-            raise ValueError("No questions found")
-        return summary
+            raise ValueError("No summary was found")
+        return {
+            "id": summary.id,
+            "content": summary.content
+        }
     finally:
         session.close()
 
@@ -413,4 +478,21 @@ def create_message(chat_id, sender_type, content):
     finally:
         session.close()
 
+def get_messages(chat_id: int):
+    session = SessionLocal()
+    try:
+        messages = session.query(Messages).filter(Messages.chat_id == chat_id).all()
+        if messages == []:
+            raise ValueError("No massages were found")
 
+        return [
+            {
+                "id": m.id,
+                "course_id": m.course_id,
+                "sender_type": m.sender_type,
+                "content": m.content,
+                "time_sent": m.time_sent
+            } for m in messages
+        ]
+    finally:
+        session.close()
