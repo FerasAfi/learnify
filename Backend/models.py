@@ -20,8 +20,15 @@ class Course(BaseModel):
 
     user_id: int
     name: str = "Untitled Course"
-    source: str
 
+
+class Source(BaseModel):
+    course_id: int
+    source: str
+    type: str
+
+class GenerateRequest(BaseModel):
+    course_id: int
 
 
 class Quiz(BaseModel):

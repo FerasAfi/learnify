@@ -1,0 +1,3 @@
+Cloud computing is a model of delivering computing services—such as servers, storage, databases, networking, software, and processing power—through the internet instead of using local computers or on-premises data centers. Rather than buying and maintaining physical hardware, users can access these resources from cloud providers whenever they need them.
+
+One of the key features of cloud computing is on-demand availability. Resources can be quickly scaled up or down depending on usage, which makes cloud systems highly flexible and efficient. This means a company can handle high traffic or heavy workloads without permanently investing in expensive infrastructure.

@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from sqlalchemy import ForeignKey, Column, Integer, String, Boolean, DateTime, func, Text
+from utils import llm
 import json
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./learnify.db"
@@ -33,11 +34,24 @@ class Courses(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     name = Column(String(30), default="Untitled Course")
-    source = Column(Text)
     date_created = Column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
-        return f"<courses(id='{self.id}' user_id='{self.user_id}' name='{self.name}' source='{self.source}' date_created='{self.date_created}' )>"
+        return f"<courses(id='{self.id}' user_id='{self.user_id}' name='{self.name}' date_created='{self.date_created}' )>"
+
+
+class Sources(Base):
+    __tablename__ = "sources"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    course_id = Column(Integer, ForeignKey("courses.id"))
+    origin = Column(Text)
+    transcript = Column(Text)
+    date_added = Column(DateTime(timezone=True), server_default=func.now())
+
+
+    def __repr__(self):
+        return f"<sources(id='{self.id}' course_id='{self.course_id}' origin='{self.origin}' transcript='{self.transcript}' date_added='{self.date_added}' )>"
 
 
 class Quizs(Base):
@@ -46,6 +60,7 @@ class Quizs(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     course_id = Column(Integer, ForeignKey("courses.id"))
     name = Column(String(30))
+
 
     def __repr__(self):
         return f"<quizs(id='{self.id}' name='{self.name}')>"
@@ -98,6 +113,7 @@ class Summaries(Base):
     course_id = Column(Integer, ForeignKey("courses.id"))
     content = Column(Text)
 
+
     def __repr__(self):
         return f"<summaries (id='{self.id}' course_id='{self.course_id}' content='{self.content}')>"
 
@@ -110,6 +126,7 @@ class Chats(Base):
     course_id = Column(Integer, ForeignKey("courses.id"))
     time_created = Column(DateTime(timezone=True), server_default=func.now())
 
+
     def __repr__(self):
         return f"<chats(id='{self.id}' course_id='{self.course_id}' user_id='{self.user_id}' time_created='{self.time_created}' )>"
 
@@ -119,13 +136,12 @@ class Messages(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     chat_id = Column(Integer, ForeignKey("chats.id"))
-    course_id = Column(Integer, ForeignKey("courses.id"))
     sender_type = Column(Boolean)
     content = Column(Text)
     time_sent = Column(DateTime(timezone=True), server_default=func.now())
 
     def __repr__(self):
-        return f"<messages(id='{self.id}' course_id='{self.course_id}' chat_id='{self.chat_id}' time_sent='{self.time_sent} sender_type={self.sender_type}  content={self.content}  ' )>"
+        return f"<messages(id='{self.id}' chat_id='{self.chat_id}' time_sent='{self.time_sent} sender_type={self.sender_type}  content={self.content}  ' )>"
 
 
 Base.metadata.create_all(engine)
@@ -151,12 +167,14 @@ def create_user(username, password, email, sex, age):
         )
         session.add(new_user)
         session.commit()
+        session.refresh(user_exists)
         print(f"user {username} added successfully")
         return new_user
+
     except Exception as e:
         session.rollback()
         print(f"failed to add {username}")
-        return 0
+        raise
     finally:
         session.close()
 
@@ -169,7 +187,10 @@ def check_credentials(username, password):
         if user.password != password:
             raise ValueError("Password is incorrect")
 
-        return True
+        return {
+            "msg": "login successful",
+            "user_id": user.id
+        }
     finally:
         session.close()
 
@@ -197,29 +218,41 @@ def update_username(user_id, new_username):
 
 def delete_account(user_id):
     session = SessionLocal()
-    return
-
-
-
-
+    try:
+        user = session.query(Users).filter(Users.id == user_id).first()
+        if not user:
+            raise ValueError(f'No user found with the id: {user_id}')
+        session.delete(user)
+        session.commit()
+        return 1
+    except Exception as e:
+        session.rollback()
+        print(f"failed to delete user with id:  {user_id}")
+        raise e
+    finally:
+        session.close()
 
 
 #Course
 #############------------------------------------------------------##############
 
 
-def create_course(user_id, name, source):
+def create_course(user_id):
     session = SessionLocal()
     try:
         new_course = Courses(
-                user_id=user_id,
-                name=name,
-                source=source
+                user_id=user_id
         )
         session.add(new_course)
         session.commit()
         print(f"course with {user_id} id was added successfully")
-        return 1
+        return {
+            'msg': "Course created successfully",
+            'id': new_course.id,
+            'user_id': new_course.user_id,
+            'name': new_course.name,
+            'date_created': new_course.date_created.isoformat() if new_course.date_created else None
+        }
     except Exception as e:
         session.rollback()
         print(f"failed to add course with {user_id} id")
@@ -238,7 +271,6 @@ def get_courses(user_id: int):
                 "id": c.id,
                 "name": c.name,
                 "user_id": c.user_id,
-                "source": c.source,
                 "date_created": c.date_created
             }
             for c in courses
@@ -246,22 +278,35 @@ def get_courses(user_id: int):
     finally:
         session.close()
 
-def add_source(course_id, origin, content):
+def add_source(course_id, origin, transcript):
     session = SessionLocal()
-    source = {"origin":origin, "content": content}
-    try:
-        course = session.query(Courses).filter(Courses.id == course_id).first()
-        if not course:
-            raise ValueError(f"No course was found with id: {course_id} ")
 
-        course.source = json.dumps(source)
+    try:
+        new_source = Sources(
+            course_id=course_id,
+            origin=origin,
+            transcript=transcript
+        )
+        session.add(new_source)
         session.commit()
         print(f"source was added successfully to course id: {course_id} ")
-        return course
+        return 1
     except Exception as e:
         session.rollback()
         print(f"failed to add source to course id:  {course_id}")
         raise e
+    finally:
+        session.close()
+
+def get_sources(course_id):
+    session = SessionLocal()
+    try:
+        sources = session.query(Sources).filter(Sources.course_id == course_id).all()
+        if sources == []:
+            raise ValueError(f"No courses found with {course_id} id")
+        return [
+                s.transcript  for s in sources
+        ]
     finally:
         session.close()
 
@@ -284,7 +329,104 @@ def update_course_title(course_id, title):
         session.close()
 
 def delete_course(course_id):
-    pass
+    session = SessionLocal()
+    try:
+        course = session.query(Courses).filter(Courses.id == course_id).first()
+        if not course:
+            raise ValueError(f'No course found with the id: {course_id}')
+
+        session.query(Questions).filter(
+            Questions.quiz_id.in_(
+                session.query(Quizs.id).filter(Quizs.course_id == course_id)
+            )
+        ).delete(synchronize_session=False)
+
+        session.query(Messages).filter(
+            Messages.chat_id.in_(
+                session.query(Chats.id).filter(Chats.course_id == course_id)
+            )
+        ).delete(synchronize_session=False)
+
+        session.query(Sources).filter(Sources.course_id == course_id).delete()
+        session.query(Quizs).filter(Quizs.course_id == course_id).delete()
+        session.query(FlashCards).filter(FlashCards.course_id == course_id).delete()
+        session.query(Summaries).filter(Summaries.course_id == course_id).delete()
+        session.query(Chats).filter(Chats.course_id == course_id).delete()
+
+        session.delete(course)
+        session.commit()
+        return 1
+    except Exception as e:
+        session.rollback()
+        print(f"failed to delete course with id:  {course_id}")
+        raise e
+    finally:
+        session.close()
+
+def add_generate_content(course_id):
+    session = SessionLocal()
+    try:
+        print(f"DEBUG: Starting content generation for course_id: {course_id}")
+
+
+        sources = get_sources(course_id)
+        print(f"DEBUG: Sources type: {type(sources)}")
+
+        if not sources:
+            raise ValueError(f"No sources found for course_id: {course_id}")
+        if isinstance(sources, list):
+            content = ' '.join(str(item).strip() for item in sources if item)
+        elif isinstance(sources, str):
+            content = sources
+        else:
+            content = str(sources)
+        if not content.strip():
+            raise ValueError("Extracted content is empty")
+
+
+        print("DEBUG: Calling LLM...")
+        course_title, summary, flashcards, quizs = llm.generate_content(content)
+        print(f"DEBUG: LLM returned - title: {course_title}, flashcards: {len(flashcards)}, quizs: {len(quizs)}")
+
+        if not course_title or not summary:
+            raise ValueError("LLM failed to generate valid content")
+
+        print("DEBUG: Updating course title...")
+        update_course_title(course_id, course_title)
+
+
+        print("DEBUG: Creating summary...")
+        create_summary(course_id, summary)
+
+
+        if flashcards:
+            print(f"DEBUG: Creating {len(flashcards)} flashcards...")
+            for flashcard in flashcards:
+                if 'front' in flashcard and 'back' in flashcard:
+                    create_flashcard(course_id, flashcard['front'], flashcard['back'])
+
+
+        quiz_title = f'Quiz for {course_title}'
+        print(f"DEBUG: Creating quiz: {quiz_title}")
+        quiz_id = create_quiz(course_id, quiz_title)
+
+        if quiz_id and quizs:
+            print(f"DEBUG: Creating quiz questions...")
+            for quiz in quizs:
+                create_question(quiz_id, quiz['question'], str(quiz['options']), quiz['answer'])
+
+
+        session.commit()
+        print(f"DEBUG: Successfully completed for course_id: {course_id}")
+
+    except Exception as e:
+        print(f"ERROR in add_generate_content: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 #QUIZ
@@ -293,16 +435,17 @@ def delete_course(course_id):
 
 def create_quiz(course_id, name):
     session = SessionLocal()
+    new_quiz = None
     try:
         new_quiz = Quizs(course_id=course_id, name=name)
         session.add(new_quiz)
         session.commit()
         print(f"quiz with {course_id} id was added successfully")
-        return 1
+        return new_quiz.id
     except Exception as e:
         session.rollback()
         print(f"failed to add quiz with {course_id} id")
-        return 0
+        return new_quiz.id
     finally:
         session.close()
 

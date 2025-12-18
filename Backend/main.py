@@ -1,10 +1,20 @@
 from fastapi import FastAPI, HTTPException
-from models import User, LoginCredentials,Course, Quiz, Question, FlashCard, Summary, Chat, Message
+from fastapi.middleware.cors import CORSMiddleware
+from models import User, LoginCredentials, Course, Source,GenerateRequest , Quiz, Question, FlashCard, Summary, Chat, Message
 import database as db
 from utils import text_extraction as txt
 
+
+
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 #Authentication
@@ -13,28 +23,40 @@ app = FastAPI()
 @app.post('/signup')
 def signup(user: User):
     try:
-        db.create_user(
+        result = db.create_user(
             username=user.username,
             password=user.password,
             email=user.email,
             sex=user.sex,
             age=user.age
         )
+
+        if result == 0:
+            raise HTTPException(status_code=500, detail="Error creating user")
         return {'msg':"User created successfully"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500,detail="Error creating user" )
+    except Exception as e:
+        raise HTTPException(status_code=500,detail=str(e))
 
 @app.post('/signin')
 def signin(credentials: LoginCredentials):
     try:
-        db.check_credentials(credentials.username, credentials.password)
-        return {"msg": "login successful"}
+        return db.check_credentials(credentials.username, credentials.password)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
-        raise  HTTPException(status_code=500,detail="Error creating user")
+        raise  HTTPException(status_code=500,detail="Error while checking credentials")
+
+@app.delete('/delete-user')
+def delete_user(user_id: int):
+    try:
+        db.delete_account(user_id)
+        return {'msg': f'User with id: {user_id} was deleted successfully'}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 #Course
@@ -44,12 +66,9 @@ def signin(credentials: LoginCredentials):
 @app.post('/create-course')
 def create_course(course: Course):
     try:
-        db.create_course(
-            user_id=course.user_id,
-            name=course.name,
-            source=course.source
+        return db.create_course(
+            user_id=course.user_id
         )
-        return {'msg': "Course created successfully"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
@@ -65,22 +84,37 @@ def get_course(q: int):
         raise HTTPException(status_code=500, detail="Error while searching for courses")
 
 @app.post('/add-source')
-def add_source(course_id: int, source: str, type: str):
-
-    match type:
-        case "pdf":
-            trans = txt.get_pdf(source)
-        case "docx":
-            trans = txt.get_docx(source)
-        case "txt":
-            trans = txt.get_txt(source)
-        case "site":
-            trans = txt.get_site(source)
-        case _:
-            raise HTTPException(status_code=400, detail="Invalid type provided")
-
+def add_source(source: Source):
     try:
-        db.add_source(course_id, source, trans)
+        print(f"DEBUG: Received - course_id={source.course_id}, type={type}")
+        print(f"DEBUG: Source length: {len(source.source)} chars")
+        print(f"DEBUG: Source first 100 chars: {source.source[:100]}")
+
+        match source.type:
+            case "yt":
+                print("DEBUG: Processing YouTube...")
+                trans = txt.get_yt(source.source)
+            case "pdf":
+                trans = txt.get_pdf(source.source)
+            case "docx":
+                trans = txt.get_docx(source.source)
+            case "txt":
+                trans = txt.get_txt(source.source)
+            case "site":
+                trans = txt.get_site(source.source)
+            case _:
+                raise HTTPException(status_code=400, detail="Invalid type provided")
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Failed to extract transcript")
+    print(f"DEBUG: Transcript length: {len(trans)} chars")
+    try:
+        db.add_source(source.course_id, source.source, trans)
+
         return {"message": "Source added successfully"}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=e)
@@ -88,7 +122,17 @@ def add_source(course_id: int, source: str, type: str):
         print(e)
         raise HTTPException(status_code=500, detail="Error while adding source")
 
-@app.post('/update-course-title')
+@app.get('/get-sources')
+def get_sources(course_id: int):
+    try:
+        return db.get_sources(course_id)
+
+    except ValueError as e:
+        HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        HTTPException(status_code=500, detail=str(e))
+
+@app.put('/update-course-title')
 def update_course_title(course_id: int, title: str):
     try:
         db.update_course_title(course_id, title)
@@ -99,6 +143,26 @@ def update_course_title(course_id: int, title: str):
         print(e)
         raise HTTPException(status_code=500, detail="Error while updating course title")
 
+@app.post('/generate-content')
+def generate_content(course_id: GenerateRequest):
+    try:
+        db.add_generate_content(course_id.course_id)
+        return {'msg':f'Content added to course with id: {course_id}'}
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        print(e)
+        raise HTTPException(status_code=500, detail="Error while adding content")
+
+@app.delete(('/delete-course'))
+def delete_course(course_id: int):
+    try:
+        db.delete_course(course_id)
+        return {'msg': f'Course with id: {course_id} was deleted successfully'}
+    except ValueError as e:
+        HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        HTTPException(status_code=500, detail=str(e))
 
 #Quiz
 #############------------------------------------------------------##############
